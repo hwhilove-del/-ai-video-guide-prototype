@@ -1,0 +1,38 @@
+const works=[
+{id:'w1',title:'夜の向こう側',type:'映画',year:2026,duration:112,director:'山田一郎',cast:['佐藤葵','高橋蓮'],comment:'静かな夜に、物語へゆっくり入っていきたい時の一本。',tags:['映画','じっくり','一人','今夜']},
+{id:'w2',title:'小さな宇宙',type:'ドキュメンタリー',year:2025,duration:74,director:'森美香',cast:[],comment:'短い時間でも、見慣れた世界の見え方が少し変わる作品。',tags:['ドキュメンタリー','短い','一人','今夜']},
+{id:'w3',title:'夏休みの地図',type:'アニメ',year:2024,duration:98,director:'木村透',cast:['声：青木空'],comment:'家族で観たあとに会話が残るタイプの作品。',tags:['アニメ','家族','子ども','今週末']},
+{id:'w4',title:'CITY SESSION',type:'音楽',year:2026,duration:52,director:'',cast:['The Lanterns'],comment:'まとまった映画一本ほどの時間はない夜に。',tags:['音楽','短い','友人','今夜']},
+{id:'w5',title:'となりの食卓',type:'ドラマ',year:2025,duration:46,director:'井上真',cast:['中村梓'],comment:'気負わず観られて、人との距離を考えさせる一話。',tags:['ドラマ','家族','笑いたい','今夜']},
+{id:'w6',title:'100年前の東京',type:'YouTube',year:2026,duration:28,director:'',cast:[],comment:'少しだけ観るつもりでも、背景を調べたくなる映像。',tags:['YouTube','短い','一人','今すぐ']}
+];
+const availability=[
+{workId:'w1',platform:'Sample Stream',type:'SVOD',status:'視聴可能'},
+{workId:'w1',platform:'Sample Rent',type:'TVOD',status:'レンタル'},
+{workId:'w2',platform:'Sample Free',type:'AVOD',status:'視聴可能'},
+{workId:'w3',platform:'Sample Stream',type:'SVOD',status:'視聴可能'},
+{workId:'w3',platform:'劇場',type:'劇場',status:'上映中'},
+{workId:'w4',platform:'Sample Music',type:'SVOD',status:'視聴可能'},
+{workId:'w5',platform:'Sample Stream',type:'SVOD',status:'視聴可能'},
+{workId:'w6',platform:'YouTube',type:'YouTube',status:'視聴可能'}
+];
+const KEY='personal_video_shelf';
+const app=document.querySelector('#app');
+const getShelf=()=>JSON.parse(localStorage.getItem(KEY)||'[]');
+const saveShelf=x=>localStorage.setItem(KEY,JSON.stringify(x));
+const av=id=>availability.filter(x=>x.workId===id);
+const work=id=>works.find(x=>x.id===id);
+function card(w){return `<button class="card" data-work="${w.id}"><div class="poster">${w.title}</div><div class="card-body"><strong>${w.title}</strong><div class="meta">${w.type} / ${w.year} / ${w.duration}分</div><div class="platforms">${av(w.id).map(x=>x.type).join('・')}</div></div></button>`}
+function section(title,list){return `<section class="section"><h2>${title}</h2><div class="cards">${list.map(card).join('')}</div></section>`}
+function shell(body){app.innerHTML=`<main class="page"><div class="brand">AI映像ガイド</div>${body}</main>`;bind()}
+function home(){const shelfWorks=getShelf().map(x=>work(x.workId)).filter(Boolean);shell(`<div class="hero"><h1>今、何を観る？</h1></div>${section('今の5本',works.slice(0,5))}${section('今すぐ観る',works.filter(w=>av(w.id).some(a=>a.type!=='劇場')).slice(0,4))}${section('今夜観る',works.filter(w=>w.tags.includes('今夜')).slice(0,4))}${section('今週末観る',works.filter(w=>w.tags.includes('今週末')))}${shelfWorks.length?section('Shelfから',shelfWorks):''}`)}
+function detail(id){const w=work(id);const entry=getShelf().find(x=>x.workId===id);shell(`<div class="section"><button class="secondary" data-route="home">戻る</button></div><div class="detail-poster">${w.title}</div><section class="section"><h1>${w.title}</h1><div class="meta">${w.year} / ${w.type} / ${w.duration}分</div>${w.director?`<p>監督：${w.director}</p>`:''}${w.cast.length?`<p>出演：${w.cast.join('、')}</p>`:''}</section><div class="editorial"><strong>AI編集部</strong><h2>今、これを観るなら……</h2><p>${w.comment}</p></div><div class="availability"><h2>観られる場所</h2>${av(id).map(a=>`<div class="availability-row"><span>${a.platform} <small>${a.type}</small></span><strong>${a.status}</strong></div>`).join('')}</div><div class="shelf-box"><h2>Shelf</h2>${entry?`<p>登録済み：${entry.state}</p><button class="primary" data-route="shelf">Shelfを見る</button>`:`<select id="state" class="state-select"><option>観たい</option><option>観た</option><option>購入・レンタル</option></select><input id="keywords" class="search-input" placeholder="個人キーワード（例：夜向き、家族で観たい）"><br><br><button class="primary" id="addShelf" data-id="${id}">＋ Shelfに追加</button>`}</div>`)}
+function search(){shell(`<div class="hero"><h1>何を観る？</h1></div><input id="q" class="search-input" placeholder="作品名・人名・キーワード"><section class="section"><h2>誰と観る？</h2><div class="chips">${['一人','家族','友人','子ども'].map(x=>`<button class="secondary filter" data-filter="${x}">${x}</button>`).join('')}</div></section><section class="section"><h2>作品</h2><div id="results" class="cards">${works.map(card).join('')}</div></section>`);document.querySelector('#q').addEventListener('input',e=>renderResults(e.target.value));document.querySelectorAll('.filter').forEach(b=>b.onclick=()=>renderResults(b.dataset.filter))}
+function renderResults(q){const s=q.trim().toLowerCase();document.querySelector('#results').innerHTML=works.filter(w=>[w.title,w.type,w.director,...w.cast,...w.tags].join(' ').toLowerCase().includes(s)).map(card).join('');bindWork()}
+function shelf(){const entries=getShelf();shell(`<div class="hero"><h1>SHELF</h1></div><input id="sq" class="search-input" placeholder="Shelfを検索"><div class="chips section">${['すべて','観たい','観た','購入・レンタル'].map(x=>`<button class="secondary sf" data-state="${x}">${x}</button>`).join('')}</div><div id="shelfList">${shelfList(entries)}</div>`);document.querySelector('#sq').addEventListener('input',e=>filterShelf(e.target.value,'すべて'));document.querySelectorAll('.sf').forEach(b=>b.onclick=()=>filterShelf(document.querySelector('#sq').value,b.dataset.state))}
+function shelfList(entries){if(!entries.length)return '<p>Shelfにはまだ作品がありません。</p>';return entries.map(e=>{const w=work(e.workId);return `<div class="shelf-item" data-work="${w.id}"><strong>${w.title}</strong><div class="meta">${w.type} / ${w.year}</div><p>状態：${e.state}</p>${e.keywords.map(k=>`<span class="keyword">#${k}</span>`).join('')}</div>`}).join('')}
+function filterShelf(q,state){const s=q.toLowerCase();const entries=getShelf().filter(e=>{const w=work(e.workId);return (state==='すべて'||e.state===state)&&[w.title,...e.keywords].join(' ').toLowerCase().includes(s)});document.querySelector('#shelfList').innerHTML=shelfList(entries);bindWork()}
+function bindWork(){document.querySelectorAll('[data-work]').forEach(el=>el.onclick=()=>detail(el.dataset.work))}
+function bind(){bindWork();document.querySelectorAll('[data-route]').forEach(b=>b.onclick=()=>route(b.dataset.route));const add=document.querySelector('#addShelf');if(add)add.onclick=()=>{const shelf=getShelf();const keywords=document.querySelector('#keywords').value.split(/[、,]/).map(x=>x.trim()).filter(Boolean);shelf.push({id:`s${Date.now()}`,workId:add.dataset.id,state:document.querySelector('#state').value,keywords,addedAt:new Date().toISOString()});saveShelf(shelf);detail(add.dataset.id)}}
+function route(r){if(r==='search')search();else if(r==='shelf')shelf();else home()}
+document.querySelectorAll('.bottom-nav [data-route]').forEach(b=>b.onclick=()=>route(b.dataset.route));home();
